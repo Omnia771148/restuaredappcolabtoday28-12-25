@@ -9,82 +9,117 @@ export default function OrdersList() {
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
 
-  const rest = typeof window !== "undefined" ? localStorage.getItem("restlocation") : null;
+  const rest =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('restlocation')
+      : null;
+
   const prevOrdersRef = useRef([]);
 
-  // Enable audio on first click
+  // Enable audio notification
   const enableAudio = () => {
     setAudioEnabled(true);
     const audio = new Audio('/noti.mp3');
-    audio.play().catch(err => console.error("Audio play failed:", err));
+    audio.play().catch(() => {});
   };
 
   useEffect(() => {
-    const restaurantId = localStorage.getItem("restid");
+    const restaurantId = localStorage.getItem('restid');
 
     if (!restaurantId) {
-      alert("No Restaurant ID found in localStorage");
+      alert('No Restaurant ID found');
       setLoading(false);
       return;
     }
 
     const fetchOrders = async () => {
       try {
-        const response = await axios.get(`/api/orders?restaurantId=${restaurantId}`);
-        if (response.data.success) {
-          const newOrders = response.data.orders;
+        const res = await axios.get(
+          `/api/orders?restaurantId=${restaurantId}`
+        );
 
-          // Compare previous orders and new orders
+        if (res.data.success) {
+          const newOrders = res.data.orders;
+
           const prevIds = prevOrdersRef.current.map(o => o._id);
           const newIds = newOrders.map(o => o._id);
 
-          const isUpdated = newIds.some(id => !prevIds.includes(id)); // only new orders trigger audio
+          const hasNewOrder = newIds.some(id => !prevIds.includes(id));
 
-          if (isUpdated && audioEnabled) {
+          if (hasNewOrder && audioEnabled) {
             const audio = new Audio('/noti.mp3');
-            audio.play().catch(err => console.error("Audio play failed:", err));
+            audio.play().catch(() => {});
           }
 
           setOrders(newOrders);
           prevOrdersRef.current = newOrders;
-        } else {
-          console.warn("Failed to load orders");
         }
       } catch (err) {
-        console.error("Fetch orders error:", err);
+        console.error('Fetch orders error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrders(); // initial fetch
-    const interval = setInterval(fetchOrders, 3000); // polling
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 3000);
     return () => clearInterval(interval);
-  }, [audioEnabled]); // depends on audioEnabled
+  }, [audioEnabled]);
 
+  // ACCEPT ORDER
   async function acceptOrder(orderId) {
     try {
-      const res = await axios.post("/api/orders/accept", { orderId, rest });
+      const res = await axios.post('/api/orders/accept', {
+        orderId,
+        rest
+      });
+
       if (res.data.success) {
-        alert("✅ Order accepted!");
-        setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
-        prevOrdersRef.current = prevOrdersRef.current.filter(order => order._id !== orderId);
+        alert('✅ Order accepted');
+        removeOrder(orderId);
       } else {
-        alert("❌ " + res.data.message);
+        alert(res.data.message);
       }
     } catch (err) {
-      console.error("❌ Accept order error:", err);
-      alert("Something went wrong while accepting the order.");
+      console.error('Accept error:', err);
+      alert('Error accepting order');
     }
   }
+
+  // REJECT ORDER
+  async function rejectOrder(orderId) {
+    try {
+      const res = await axios.post('/api/orders/reject', { orderId });
+
+      if (res.data.success) {
+        alert('❌ Order rejected');
+        removeOrder(orderId);
+      } else {
+        alert(res.data.message);
+      }
+    } catch (err) {
+      console.error('Reject error:', err);
+      alert('Error rejecting order');
+    }
+  }
+
+  // Remove order from UI + ref
+  const removeOrder = (orderId) => {
+    setOrders(prev => prev.filter(o => o._id !== orderId));
+    prevOrdersRef.current = prevOrdersRef.current.filter(
+      o => o._id !== orderId
+    );
+  };
 
   if (loading) return <p>Loading...</p>;
 
   return (
     <div style={{ padding: '20px' }}>
       <h2>🧾 Orders for Your Restaurant</h2>
+
       <Link href="/AcceptedOrdersList">Accepted Orders</Link>
 
+      <br /><br />
 
       {!audioEnabled && (
         <button
@@ -107,60 +142,67 @@ export default function OrdersList() {
         <p>No orders found.</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0 }}>
-          {orders.map((order) => (
+          {orders.map(order => (
             <li
               key={order._id}
               style={{
                 marginBottom: '12px',
-                padding: '10px',
+                padding: '12px',
                 border: '1px solid #ccc',
                 borderRadius: '8px',
-                backgroundColor: '#f9f9f9',
+                backgroundColor: '#f9f9f9'
               }}
             >
-              <p><strong>Item(s):</strong></p>
-              {Array.isArray(order.items) && order.items.length > 0 ? (
-                <ul>
-                  {order.items.map((item, idx) => (
-                    <li key={idx}>
-                      {item.name} — ₹{item.price} × {item.quantity}
-                    </li>
-                  ))}
-                </ul>
-              ) : <p>No items found in this order.</p>}
+              <p><strong>Items:</strong></p>
 
-              <p><strong>Total Price:</strong> ₹{order.totalPrice}</p>
+              <ul>
+                {order.items.map((item, idx) => (
+                  <li key={idx}>
+                    {item.name} — ₹{item.price} × {item.quantity}
+                  </li>
+                ))}
+              </ul>
+
+              <p><strong>Total:</strong> ₹{order.totalPrice}</p>
+              <p><strong>Order ID:</strong> {order.orderId}</p>
               <p><strong>User ID:</strong> {order.userId}</p>
-              <p style={{ fontSize: '1.1em', color: '#333' }}>
-                Order ID: {order.orderId}
+              <p>
+                <strong>Date:</strong>{' '}
+                {new Date(order.orderDate).toLocaleString()}
               </p>
-              {order.orderDate && <p><strong>Ordered On:</strong> {new Date(order.orderDate).toLocaleString()}</p>}
 
               <button
                 onClick={() => acceptOrder(order._id)}
                 style={{
-                  marginTop: "8px",
-                  padding: "6px 12px",
-                  backgroundColor: "#4CAF50",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer"
+                  padding: '6px 12px',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
                 }}
               >
                 Accept
               </button>
+
+              <button
+                onClick={() => rejectOrder(order._id)}
+                style={{
+                  marginLeft: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reject
+              </button>
             </li>
           ))}
-
         </ul>
-        
       )}
-      <div className="row">
-                    <button onClick={() => window.location.href = "/Restorentitems"} style={{ backgroundColor: "green" }}>My items</button><br>
-                    </br>
-                    <button onClick={() => window.location.href = "/AcceptedOrdersList"} style={{ backgroundColor: "red" }}>accepted orders</button>
-                </div>
     </div>
   );
 }
