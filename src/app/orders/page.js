@@ -202,7 +202,18 @@ export default function OrdersList() {
             </li>
           ))}
         </ul>
+        
+        
       )}
+      <div>
+        <div className="row">
+                    <button onClick={() => window.location.href = "/AcceptedOrdersList"} style={{ backgroundColor: "green" }}>Accepted orders</button>
+                </div>
+                <div className="row">
+                    <button onClick={() => window.location.href = "/todayorders"} style={{ backgroundColor: "green" }}>rejected orders</button>
+                </div>
+      </div>
+  
     </div>
   );
 }
