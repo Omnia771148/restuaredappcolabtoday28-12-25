@@ -279,7 +279,7 @@ export default function OrdersList() {
                   borderRadius: "6px",
                 }}
               >
-                Reject
+             
               </button>
             </li>
           ))}
