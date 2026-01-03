@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose"; // ✅ NEW (only addition)
+import mongoose from "mongoose";
 import connectionToDatabase from "../../../../../lib/mongoose";
 import Order from "../../../../../models/Order";
 import RejectedOrder from "../../../../../models/RejectedOrder";
+
+// ✅ NEW: lightweight model for orderstatuses
+const OrderStatus =
+  mongoose.models.OrderStatus ||
+  mongoose.model(
+    "OrderStatus",
+    new mongoose.Schema({}, { strict: false }), // allow any fields
+    "orderstatuses" // force collection name
+  );
 
 export async function POST(req) {
   try {
@@ -14,7 +23,7 @@ export async function POST(req) {
     if (!order) {
       return NextResponse.json({
         success: false,
-        message: "Order not found"
+        message: "Order not found",
       });
     }
 
@@ -28,28 +37,29 @@ export async function POST(req) {
       orderDate: order.orderDate,
       rest: order.rest,
       orderId: order.orderId,
-      status: "rejected"
+      status: "rejected",
     });
 
     // Remove from active orders (UNCHANGED)
     await Order.findByIdAndDelete(orderId);
 
     // ✅ NEW: Update OrderStatus collection
-    await mongoose.connection.collection("orderstatuses").updateOne(
-      { orderId: order.orderId },
-      {
-        $set: {
-          status: "Rejected by restaurant"
-        }
-      }
+    const result = await OrderStatus.updateOne(
+      { orderId: order.orderId, status: "Pending" }, // match pending status
+      { $set: { status: "Rejected by restaurant" } }
     );
 
-    return NextResponse.json({ success: true });
+    console.log("OrderStatus update result:", result);
+
+    return NextResponse.json({
+      success: true,
+      message: "Order rejected and status updated",
+    });
   } catch (err) {
     console.error("Reject order error:", err);
     return NextResponse.json({
       success: false,
-      message: "Server error"
+      message: err.message || "Server error",
     });
   }
 }

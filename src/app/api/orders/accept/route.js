@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose"; // ✅ ONLY NEW IMPORT
+import mongoose from "mongoose";
 import connectionToDatabase from "../../../../../lib/mongoose";
 import Order from "../../../../../models/Order";
 import AcceptedOrder from "../../../../../models/AcceptedOrder";
+
+// ✅ NEW: lightweight model for orderstatuses
+const OrderStatus =
+  mongoose.models.OrderStatus ||
+  mongoose.model(
+    "OrderStatus",
+    new mongoose.Schema({}, { strict: false }), // allow any fields
+    "orderstatuses" // force collection name
+  );
 
 export async function POST(request) {
   await connectionToDatabase();
@@ -29,7 +38,7 @@ export async function POST(request) {
 
     const orderData = order.toObject();
 
-    // 3. Prepare the new entry (UNCHANGED)
+    // 3. Prepare the new entry
     const newEntryData = {
       ...orderData,
       rest: rest,
@@ -40,24 +49,23 @@ export async function POST(request) {
     delete newEntryData._id;
     delete newEntryData.__v;
 
-    // 5. Create in Accepted collection (UNCHANGED)
-    await AcceptedOrder.create(newEntryData);
+    // 5. ✅ Upsert into Accepted collection (avoids duplicate key error)
+    await AcceptedOrder.updateOne(
+      { orderId: orderData.orderId }, // match by orderId
+      { $set: newEntryData },
+      { upsert: true }
+    );
 
-    // 6. Delete from old collection (UNCHANGED)
+    // 6. Delete from old collection
     await Order.findByIdAndDelete(mongoId);
 
-    // ✅ 7. NEW FUNCTIONALITY (ONLY ADDITION)
-    await mongoose.connection.collection("orderstatuses").updateOne(
-      {
-        orderId: orderData.orderId, // ORD-xxxx
-        status: "Pending",
-      },
-      {
-        $set: {
-          status: "Waiting for delivery boy to accept",
-        },
-      }
+    // 7. Update status in orderstatuses collection
+    const result = await OrderStatus.updateOne(
+      { orderId: orderData.orderId, status: "Pending" },
+      { $set: { status: "Waiting for delivery boy to accept" } }
     );
+
+    console.log("OrderStatus update result:", result);
 
     return NextResponse.json({
       success: true,
