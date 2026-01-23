@@ -5,7 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 // Import your custom loading component
 import Loading from "../loading/page";
-import useFcmToken from "@/hooks/useFcmToken"; // Import the hook
+
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export default function OrdersList() {
