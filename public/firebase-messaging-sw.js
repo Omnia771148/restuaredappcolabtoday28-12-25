@@ -21,9 +21,9 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
     console.log('Received background message ', payload);
 
-    const notificationTitle = payload.notification?.title || 'New Order';
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'New Order';
     const notificationOptions = {
-        body: payload.notification?.body || 'You have a new order!',
+        body: payload.notification?.body || payload.data?.body || 'You have a new order!',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-96x96.png',
         data: payload.data || {}, // Pass data payload
