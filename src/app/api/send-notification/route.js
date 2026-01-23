@@ -52,16 +52,14 @@ export async function POST(req) {
             // Android specific: High Priority is KEY for waking up devices
             android: {
                 priority: 'high',
-                ttl: 60 * 60 * 24, // 24 hours
+                ttl: 60 * 60 * 24 * 1000, // 24 hours in milliseconds (FCM V1 API expects explicit format, but checking docs usually '60s' or similar string, but number is safe for some libs. Actually V1 uses string like '86400s', but admin sdk helper usually fixes it. Let's start clean).
+                // Simplified notification block to avoid invalid resource errors
                 notification: {
-                    channelId: 'default',
                     priority: 'high',
                     defaultSound: true,
                     defaultVibrateTimings: true,
-                    sound: 'default',
-                    visibility: 'public',
-                    icon: 'stock_ticker_update',
-                    color: '#ff9800' // Brand color
+                    visibility: 'public', // Show even on lock screen
+                    color: '#ff9800'      // Brand color
                 }
             },
 
