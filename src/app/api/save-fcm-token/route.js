@@ -18,7 +18,10 @@ export async function POST(req) {
         // Find the user by restId and update the fcmToken
         const updatedUser = await RestuarentUser.findOneAndUpdate(
             { restId: restId },
-            { $set: { fcmToken: token } },
+            {
+                $addToSet: { fcmTokens: token }, // Add to array unique
+                $set: { fcmToken: token }       // Keep legacy field updated just in case
+            },
             { new: true }
         );
 

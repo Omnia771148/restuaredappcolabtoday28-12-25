@@ -16,14 +16,52 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
+// 🔹 HANDLE BACKGROUND MESSAGES
+// This is critical for Android/iOS when app is closed/backgrounded
 messaging.onBackgroundMessage((payload) => {
     console.log('Received background message ', payload);
+
     const notificationTitle = payload.notification?.title || 'New Order';
     const notificationOptions = {
         body: payload.notification?.body || 'You have a new order!',
         icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-96x96.png'
+        badge: '/icons/icon-96x96.png',
+        data: payload.data || {}, // Pass data payload
+        requireInteraction: true, // ⚠️ Crucial for keeping notification visible on some Androids
+        tag: 'new-order' // Prevents stacking if desired, or remove to stack
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// 🔹 ACTIVATE IMMEDIATELY
+// This ensures that updates to the SW take effect immediately
+self.addEventListener('install', function (event) {
+    console.log('Service Worker installing.');
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function (event) {
+    console.log('Service Worker activating.');
+    event.waitUntil(self.clients.claim());
+});
+
+// 🔹 HANDLE NOTIFICATION CLICKS
+// This is often required for valid service worker behavior on some OSes
+self.addEventListener('notificationclick', function (event) {
+    console.log('Computed notification click');
+    event.notification.close();
+
+    // Open the app
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(function (clientList) {
+            for (let i = 0; i < clientList.length; i++) {
+                const client = clientList[i];
+                if (client.url.includes('/') && 'focus' in client)
+                    return client.focus();
+            }
+            if (clients.openWindow)
+                return clients.openWindow('/orders');
+        })
+    );
 });
