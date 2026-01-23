@@ -6,13 +6,14 @@ import Link from "next/link";
 // Import your custom loading component
 import Loading from "../loading/page";
 import useFcmToken from "@/hooks/useFcmToken"; // Import the hook
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export default function OrdersList() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  const { token, notificationPermissionStatus } = useFcmToken(); // Use the hook
+  // const { token, notificationPermissionStatus } = useFcmToken(); <-- Removed for Native
 
   const rest =
     typeof window !== "undefined"
@@ -53,6 +54,23 @@ export default function OrdersList() {
         if (res.data.success) {
           setIsActive(res.data.isActive);
         }
+
+        // 🔹 2. Send Restaurant ID to Native Background Runner (Running separate from webview)
+        try {
+          // We need to dynamically import because this is client-side only
+          const { BackgroundRunner } = await import('@capacitor/background-runner');
+
+          // Dispatch event to the background runner
+          await BackgroundRunner.dispatchEvent({
+            label: 'com.restapp.manager.checkOrders',
+            event: 'setRestId',
+            details: { restId: restaurantId }
+          });
+          console.log("Background Runner Configured with RestID:", restaurantId);
+        } catch (bgErr) {
+          console.warn("Background Runner setup failed (might be in browser?)", bgErr);
+        }
+
       } catch (err) {
         console.error("Status fetch error", err);
       }
@@ -71,11 +89,31 @@ export default function OrdersList() {
           const prevIds = prevOrdersRef.current.map((o) => o._id);
           const newIds = newOrders.map((o) => o._id);
 
+          // ... inside fetchOrders ...
+
           const hasNewOrder = newIds.some((id) => !prevIds.includes(id));
 
-          if (hasNewOrder && audioEnabled && isActive) {
-            const audio = new Audio("/noti.mp3");
-            audio.play().catch(() => { });
+          if (hasNewOrder && isActive) {
+            // 1. Play Audio (Foreground)
+            if (audioEnabled) {
+              const audio = new Audio("/noti.mp3");
+              audio.play().catch(() => { });
+            }
+
+            // 2. Trigger Native Notification (Background/Lock Screen)
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  title: "New Order Received! 🔔",
+                  body: "Open the app to accept it.",
+                  id: new Date().getTime(),
+                  schedule: { at: new Date(Date.now() + 100) }, // Trigger immediately
+                  sound: 'noti.mp3',
+                  actionTypeId: "",
+                  extra: null
+                }
+              ]
+            }).catch(e => console.error("Native notification failed", e));
           }
 
           setOrders(newOrders);
@@ -93,7 +131,7 @@ export default function OrdersList() {
 
     const interval = setInterval(fetchOrders, 3000);
     return () => clearInterval(interval);
-  }, [audioEnabled]);
+  }, []);
 
   // 🔹 Update restaurant status
   const updateRestaurantStatus = async (status) => {

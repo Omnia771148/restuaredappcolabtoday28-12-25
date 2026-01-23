@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RestApp</string>
+    <string name="title_activity_main">RestApp</string>
+    <string name="package_name">com.restapp.manager</string>
+    <string name="custom_url_scheme">com.restapp.manager</string>
+</resources>
