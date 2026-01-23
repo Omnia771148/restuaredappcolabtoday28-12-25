@@ -37,10 +37,10 @@ export async function POST(req) {
         }
 
         const message = {
-            // notification: {
-            //     title: title || "New Order Received!",
-            //     body: body || "You have a new order waiting.",
-            // },
+            notification: {
+                title: title || "New Order Received!",
+                body: body || "You have a new order waiting.",
+            },
             data: {
                 title: title || "New Order Received!",
                 body: body || "You have a new order waiting.",

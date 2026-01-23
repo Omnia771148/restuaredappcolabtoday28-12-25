@@ -26,6 +26,7 @@ messaging.onBackgroundMessage((payload) => {
         body: payload.notification?.body || payload.data?.body || 'You have a new order!',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-96x96.png',
+        vibrate: [200, 100, 200, 100, 200, 100, 200], // ⚠️ Strong vibration pattern
         data: payload.data || {}, // Pass data payload
         requireInteraction: true, // ⚠️ Crucial for keeping notification visible on some Androids
         tag: 'new-order' // Prevents stacking if desired, or remove to stack
