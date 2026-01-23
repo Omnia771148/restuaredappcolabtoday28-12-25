@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "SPV Restaurant",
   description: "Restaurant Management App",
-  manifest: '/manifest.webmenifest',
+  manifest: '/manifest.webmanifest',
   viewport: {
     width: "device-width",
     initialScale: 1,

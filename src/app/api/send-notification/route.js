@@ -67,9 +67,12 @@ export async function POST(req) {
 
             // iOS / Apple Web Push specific
             // Note: iOS Web Push requires the user to Add to Home Screen
+            // iOS / Apple Web Push specific
+            // Note: iOS Web Push requires the user to Add to Home Screen
             webpush: {
                 headers: {
-                    Urgency: 'high'
+                    Urgency: 'high',
+                    'TTL': '86400' // 24 hours
                 },
                 fcmOptions: {
                     link: "/orders"
@@ -78,26 +81,10 @@ export async function POST(req) {
                     icon: '/icons/icon-192x192.png',
                     requireInteraction: true,
                     renotify: true,
-                    tag: 'new-order'
-                }
-            },
-
-            // Legacy Apple (APNS) - helpful if using native wrapping, otherwise ignored by web
-            apns: {
-                payload: {
-                    aps: {
-                        contentAvailable: true,
-                        mutableContent: true,
-                        sound: 'default',
-                        alert: {
-                            title: title || "New Order Received!",
-                            body: body || "You have a new order waiting.",
-                        }
-                    }
-                },
-                headers: {
-                    "apns-priority": "10", // send immediately
-                    "apns-push-type": "alert" // or "background"
+                    tag: 'new-order',
+                    // Adding title/body here again ensures it is picked up by system if data-only silent push fails to wake SW
+                    title: title || "New Order Received!",
+                    body: body || "You have a new order waiting."
                 }
             }
         };
