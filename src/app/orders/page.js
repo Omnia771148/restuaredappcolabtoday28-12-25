@@ -62,21 +62,26 @@ export default function OrdersList() {
           setIsActive(res.data.isActive);
         }
 
-        // 🔹 2. Send Restaurant ID to Native Background Runner (Running separate from webview)
-        try {
-          // We need to dynamically import because this is client-side only
-          const { BackgroundRunner } = await import('@capacitor/background-runner');
+        // 🔹 2. Send Restaurant ID to Native Background Runner
+        const initBackgroundRunner = async (retryCount = 0) => {
+          try {
+            // Dynamic import to avoid SSR errors
+            const { BackgroundRunner } = await import('@capacitor/background-runner');
 
-          // Dispatch event to the background runner
-          await BackgroundRunner.dispatchEvent({
-            label: 'com.restapp.manager.checkOrders',
-            event: 'setRestId',
-            details: { restId: restaurantId }
-          });
-          console.log("Background Runner Configured with RestID:", restaurantId);
-        } catch (bgErr) {
-          console.warn("Background Runner setup failed (might be in browser?)", bgErr);
-        }
+            await BackgroundRunner.dispatchEvent({
+              label: 'com.restapp.manager.checkOrders',
+              event: 'setRestId',
+              details: { restId: restaurantId }
+            });
+            console.log("Background Runner Configured with RestID:", restaurantId);
+          } catch (bgErr) {
+            console.warn(`Background Runner setup failed (Attempt ${retryCount + 1}):`, bgErr);
+            if (retryCount < 3) {
+              setTimeout(() => initBackgroundRunner(retryCount + 1), 2000); // Retry after 2s
+            }
+          }
+        };
+        initBackgroundRunner();
 
       } catch (err) {
         console.error("Status fetch error", err);

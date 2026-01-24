@@ -39,11 +39,14 @@ addEventListener('checkOrders', async (resolve, reject, args) => {
             CapacitorNotifications.schedule({
                 notifications: [
                     {
-                        title: "New Order (Background Check)",
-                        body: "You have orders waiting!",
-                        id: 100,
+                        title: "New Order (Background)",
+                        body: "New order received! Open app.",
+                        id: 100, // Fixed ID to update existing noti
+                        schedule: { at: new Date(Date.now() + 100) },
                         sound: 'noti.mp3',
-                        schedule: { at: new Date(Date.now() + 1000) }
+                        channelId: 'default', // Vital for Android 8+
+                        actionTypeId: "",
+                        extra: null
                     }
                 ]
             });
