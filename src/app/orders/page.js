@@ -5,7 +5,6 @@ import axios from "axios";
 import Link from "next/link";
 // Import your custom loading component
 import Loading from "../loading/page";
-import { LocalNotifications } from '@capacitor/local-notifications';
 
 export default function OrdersList() {
   const [orders, setOrders] = useState([]);
@@ -29,15 +28,6 @@ export default function OrdersList() {
   };
 
   useEffect(() => {
-    // 🔹 CRITICAL: Request Notification Permissions for Android 13+
-    const requestPermissions = async () => {
-      const permStatus = await LocalNotifications.checkPermissions();
-      if (permStatus.display !== 'granted') {
-        await LocalNotifications.requestPermissions();
-      }
-    };
-    requestPermissions();
-
     if (localStorage.getItem("audioEnabled") === "true") {
       setAudioEnabled(true);
     }
@@ -73,22 +63,6 @@ export default function OrdersList() {
               const audio = new Audio("/noti.mp3");
               audio.play().catch(() => { });
             }
-
-            // 2. Trigger Notification
-            LocalNotifications.schedule({
-              notifications: [
-                {
-                  title: "New Order Received! 🔔",
-                  body: "Open the app to accept it.",
-                  id: new Date().getTime(),
-                  schedule: { at: new Date(Date.now() + 100) },
-                  sound: 'noti.mp3',
-                  channelId: "default",
-                  actionTypeId: "",
-                  extra: null
-                }
-              ]
-            }).catch(e => console.error("Noti error", e));
           }
 
           prevOrdersRef.current = newOrders;

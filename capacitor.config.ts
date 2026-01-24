@@ -6,17 +6,6 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     url: 'https://restuaredappcolabtoday28-12-25.vercel.app', // ⚠️ REPLACE THIS WITH YOUR ACTUAL VERCEL URL
-    cleartext: true
-  },
-  plugins: {
-    BackgroundRunner: {
-      label: 'com.restapp.manager.checkOrders',
-      src: 'background.js',
-      event: 'checkOrders',
-      repeat: true,
-      interval: 1,
-      autoStart: true
-    }
   }
 };
 
