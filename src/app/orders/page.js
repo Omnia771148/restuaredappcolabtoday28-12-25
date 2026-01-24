@@ -121,6 +121,7 @@ export default function OrdersList() {
                   id: new Date().getTime(),
                   schedule: { at: new Date(Date.now() + 100) }, // Trigger immediately
                   sound: 'noti.mp3',
+                  channelId: "default", // ⚠️ REQUIRED for Android 8+
                   actionTypeId: "",
                   extra: null
                 }
