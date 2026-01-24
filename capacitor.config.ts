@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   plugins: {
     BackgroundRunner: {
       label: 'com.restapp.manager.checkOrders',
-      src: 'background.js',
+      src: 'public/background.js',
       event: 'checkOrders',
       repeat: true,
       interval: 1,
