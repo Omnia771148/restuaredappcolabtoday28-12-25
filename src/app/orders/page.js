@@ -52,84 +52,45 @@ export default function OrdersList() {
       return;
     }
 
-    // 🔹 Fetch restaurant ACTIVE / INACTIVE status
-    const fetchRestaurantStatus = async () => {
-      try {
-        const res = await axios.get(
-          `/api/restaurant-status?restaurantId=${restaurantId}`
-        );
-        if (res.data.success) {
-          setIsActive(res.data.isActive);
-        }
-
-        // 🔹 2. Send Restaurant ID to Native Background Runner
-        const initBackgroundRunner = async (retryCount = 0) => {
-          try {
-            // Dynamic import to avoid SSR errors
-            const { BackgroundRunner } = await import('@capacitor/background-runner');
-
-            await BackgroundRunner.dispatchEvent({
-              label: 'com.restapp.manager.checkOrders',
-              event: 'setRestId',
-              details: { restId: restaurantId }
-            });
-            console.log("Background Runner Configured with RestID:", restaurantId);
-          } catch (bgErr) {
-            console.warn(`Background Runner setup failed (Attempt ${retryCount + 1}):`, bgErr);
-            if (retryCount < 3) {
-              setTimeout(() => initBackgroundRunner(retryCount + 1), 2000); // Retry after 2s
-            }
-          }
-        };
-        initBackgroundRunner();
-
-      } catch (err) {
-        console.error("Status fetch error", err);
-      }
-    };
-
-    // 🔹 Fetch orders
     const fetchOrders = async () => {
       try {
         const res = await axios.get(
           `/api/orders?restaurantId=${restaurantId}`
         );
-
         if (res.data.success) {
           const newOrders = res.data.orders;
+          setOrders(newOrders);
+          setIsActive(res.data.isActive); // Update status from valid response
 
           const prevIds = prevOrdersRef.current.map((o) => o._id);
           const newIds = newOrders.map((o) => o._id);
 
-          // ... inside fetchOrders ...
-
           const hasNewOrder = newIds.some((id) => !prevIds.includes(id));
 
-          if (hasNewOrder && isActive) {
-            // 1. Play Audio (Foreground)
+          if (hasNewOrder && res.data.isActive) {
+            // 1. Play Audio
             if (audioEnabled) {
               const audio = new Audio("/noti.mp3");
               audio.play().catch(() => { });
             }
 
-            // 2. Trigger Native Notification (Background/Lock Screen)
+            // 2. Trigger Notification
             LocalNotifications.schedule({
               notifications: [
                 {
                   title: "New Order Received! 🔔",
                   body: "Open the app to accept it.",
                   id: new Date().getTime(),
-                  schedule: { at: new Date(Date.now() + 100) }, // Trigger immediately
+                  schedule: { at: new Date(Date.now() + 100) },
                   sound: 'noti.mp3',
-                  channelId: "default", // ⚠️ REQUIRED for Android 8+
+                  channelId: "default",
                   actionTypeId: "",
                   extra: null
                 }
               ]
-            }).catch(e => console.error("Native notification failed", e));
+            }).catch(e => console.error("Noti error", e));
           }
 
-          setOrders(newOrders);
           prevOrdersRef.current = newOrders;
         }
       } catch (err) {
@@ -139,12 +100,11 @@ export default function OrdersList() {
       }
     };
 
-    fetchRestaurantStatus();
-    fetchOrders();
+    fetchOrders(); // Initial fetch
+    const interval = setInterval(fetchOrders, 3000); // 3-second poll
 
-    const interval = setInterval(fetchOrders, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [audioEnabled]);
 
   // 🔹 Update restaurant status
   const updateRestaurantStatus = async (status) => {
@@ -161,8 +121,6 @@ export default function OrdersList() {
     setLoading(true); // Start loading
 
     // 🟢 BACKUP TO LOCAL STORAGE IMMEDIATELY
-    // This ensures that even if you delete from MongoDB immediately after, 
-    // it is already saved in the restaurant's local browser.
     const orderToAccept = orders.find((o) => o._id === orderId);
     if (orderToAccept) {
       const restId = localStorage.getItem("restid");
@@ -342,6 +300,10 @@ export default function OrdersList() {
                 onClick={() => acceptOrder(order._id, order.razorpayOrderId)}
                 style={{
                   padding: "6px 12px",
+                  backgroundColor: "#4CAF50",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
                   backgroundColor: "#4CAF50",
                   color: "white",
                   border: "none",

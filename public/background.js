@@ -24,27 +24,45 @@ addEventListener('checkOrders', async (resolve, reject, args) => {
             return;
         }
 
+        // DEBUG: Notify that job started (Remove this later)
+        /*
+        CapacitorNotifications.schedule({
+            notifications: [{
+                title: "Debug: Job Started",
+                body: "Checking for orders...",
+                id: 900,
+                schedule: { at: new Date(Date.now() + 100) },
+                channelId: 'default'
+            }]
+        });
+        */
+
         const response = await fetch(`https://restuaredappcolabtoday28-12-25.vercel.app/api/orders?restaurantId=${restId}`);
         const data = await response.json();
 
+        // DEBUG: Notify fetch success (Remove later)
+        /*
+        CapacitorNotifications.schedule({
+            notifications: [{
+                title: "Debug: Fetch OK",
+                body: `Orders: ${data.orders ? data.orders.length : 0}`,
+                id: 901,
+                schedule: { at: new Date(Date.now() + 100) },
+                channelId: 'default'
+            }]
+        });
+        */
+
         if (data.success && data.orders.length > 0) {
-            // 2. Here we would normally trigger a notification
-            // However, BackgroundRunner is strictly for logic.
-            // To show a notification from here, we use the Capacitor Notifications plugin
-
-            // Setup for notification is complex in runner.
-            // Usually we just return result and let the main app handle it IF it was awake.
-            // BUT since the app is dead, we need a native trigger.
-
             CapacitorNotifications.schedule({
                 notifications: [
                     {
                         title: "New Order (Background)",
                         body: "New order received! Open app.",
-                        id: 100, // Fixed ID to update existing noti
+                        id: 100,
                         schedule: { at: new Date(Date.now() + 100) },
                         sound: 'noti.mp3',
-                        channelId: 'default', // Vital for Android 8+
+                        channelId: 'default',
                         actionTypeId: "",
                         extra: null
                     }
@@ -53,6 +71,16 @@ addEventListener('checkOrders', async (resolve, reject, args) => {
         }
         resolve();
     } catch (err) {
+        // DEBUG: Notify Error
+        CapacitorNotifications.schedule({
+            notifications: [{
+                title: "Debug: Error",
+                body: JSON.stringify(err),
+                id: 999,
+                schedule: { at: new Date(Date.now() + 100) },
+                channelId: 'default'
+            }]
+        });
         reject(err);
     }
 });
