@@ -5,7 +5,6 @@ import axios from "axios";
 import Link from "next/link";
 // Import your custom loading component
 import Loading from "../loading/page";
-
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export default function OrdersList() {
@@ -13,7 +12,6 @@ export default function OrdersList() {
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  // const { token, notificationPermissionStatus } = useFcmToken(); <-- Removed for Native
 
   const rest =
     typeof window !== "undefined"
@@ -31,6 +29,15 @@ export default function OrdersList() {
   };
 
   useEffect(() => {
+    // 🔹 CRITICAL: Request Notification Permissions for Android 13+
+    const requestPermissions = async () => {
+      const permStatus = await LocalNotifications.checkPermissions();
+      if (permStatus.display !== 'granted') {
+        await LocalNotifications.requestPermissions();
+      }
+    };
+    requestPermissions();
+
     if (localStorage.getItem("audioEnabled") === "true") {
       setAudioEnabled(true);
     }
